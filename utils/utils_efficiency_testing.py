@@ -1,4 +1,5 @@
 import torch
+from tqdm import tqdm
 from .utils_simulation import make_padded_batch_from_token_lists, get_state_and_action_set
 from .utils_parsing import is_correct, get_eos_ids
 from .utils_prompting import build_prompt_continuation
@@ -324,4 +325,115 @@ def accuracy_vs_token_budget(results, budgets=None):
         )
 
     return curve
+
+
+
+
+
+@torch.inference_mode()
+def model_efficiency_test(
+        model,
+        tokenizer,
+        test_dataset,
+        MAX_TEST_EXAMPLES,
+        MAX_TOKENS,
+        device='cpu',
+):
+    results = []
+
+    n = len(test_dataset) if MAX_TEST_EXAMPLES is None else min(MAX_TEST_EXAMPLES, len(test_dataset))
+
+    for i in tqdm(range(n)):
+        ex = test_dataset[i]
+        question = ex["question"]
+        gold = ex["answer"].split("####")[-1].strip()
+
+        eos_ids = get_eos_ids(tokenizer)
+        eos_id_set = set(int(x) for x in eos_ids)
+
+        prompt = build_prompt_continuation(
+            [question],
+            tokenizer,
+        )[0]
+
+        prompt_ids = tokenizer(
+            prompt,
+            add_special_tokens=True,
+            padding=False,
+        )["input_ids"]
+
+        batch = make_padded_batch_from_token_lists(
+            token_lists=[prompt_ids],
+            pad_token_id=tokenizer.pad_token_id,
+            device=device,
+            max_context_len=None,
+        )
+
+        input_len = batch["input_ids"].shape[1]
+
+        out = model.generate(
+            input_ids=batch["input_ids"],
+            attention_mask=batch["attention_mask"],
+            max_new_tokens=MAX_TOKENS,
+            do_sample=False,
+            pad_token_id=tokenizer.pad_token_id,
+            eos_token_id=eos_ids if len(eos_ids) > 1 else eos_ids[0],
+        )
+
+        new_tokens = out[0, input_len:].tolist()
+
+        solved = False
+        for step in range(1, len(new_tokens) + 1):
+            probe_prefix = new_tokens[:step]
+
+            candidate_ids = prompt_ids + probe_prefix
+            candidate_suffix_text = tokenizer.decode(
+                candidate_ids[len(prompt_ids):],
+                skip_special_tokens=True,
+            )
+
+            if is_correct(candidate_suffix_text, gold):
+                results.append({
+                    "idx": i,
+                    "gold": gold,
+                    "solved": True,
+                    "q_tokens": step,
+                    "probe_tokens": 0,
+                    "total_new_tokens": step,
+                    "stopped_by": "eos",
+                })
+                solved = True
+                break
+
+            if any(tok in eos_id_set for tok in probe_prefix):
+                break
+        if not solved:
+            results.append({
+                "idx": i,
+                "gold": gold,
+                "solved": False,
+                "q_tokens": None,
+                "probe_tokens": 0,
+                "total_new_tokens": None,
+                "stopped_by": "eos",
+            })
+
+    return results
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
