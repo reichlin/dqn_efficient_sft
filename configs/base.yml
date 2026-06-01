@@ -1,0 +1,30 @@
+---
+seed: 0
+model:
+  llm_id: "Qwen/Qwen3-1.7B-Base"
+  horizon: 480
+  branching_factor: 10
+  action_embedding: 256
+  mlp_dims: 1024
+dataset:
+  name: "openai/gsm8k"
+  size: 1319
+training:
+  epochs: 1_000
+  buffer_size: 100_000
+  reward_lookup_horizon: 64
+  batch_size: 2
+  lr: 0.0003
+  wd: 0.0001
+  frq_save_checkpoints: 1_000
+  dqn:
+    warmup_steps: 1_000
+    batch_size: 32
+    gamma: 0.99
+    grad_clip: 0.1
+    target_update_frq: 100
+testing:
+  max_tokens: 544
+  n_workers: 80 #30
+  max_parallel_workers: 100
+...

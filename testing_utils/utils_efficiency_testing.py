@@ -382,32 +382,33 @@ def model_efficiency_test(
 
         new_tokens = out[0, input_len:].tolist()
 
-        solved = False
-        for step in range(1, len(new_tokens) + 1):
-            probe_prefix = new_tokens[:step]
+        solved = is_correct(tokenizer.decode((prompt_ids + new_tokens)[len(prompt_ids):], skip_special_tokens=True), gold)
+        if solved:
+            for step in range(1, len(new_tokens) + 1):
+                probe_prefix = new_tokens[:step]
 
-            candidate_ids = prompt_ids + probe_prefix
-            candidate_suffix_text = tokenizer.decode(
-                candidate_ids[len(prompt_ids):],
-                skip_special_tokens=True,
-            )
+                candidate_ids = prompt_ids + probe_prefix
+                candidate_suffix_text = tokenizer.decode(
+                    candidate_ids[len(prompt_ids):],
+                    skip_special_tokens=True,
+                )
 
-            if is_correct(candidate_suffix_text, gold):
-                results.append({
-                    "idx": i,
-                    "gold": gold,
-                    "solved": True,
-                    "q_tokens": step,
-                    "probe_tokens": 0,
-                    "total_new_tokens": step,
-                    "stopped_by": "eos",
-                })
-                solved = True
-                break
+                if is_correct(candidate_suffix_text, gold):
+                    results.append({
+                        "idx": i,
+                        "gold": gold,
+                        "solved": True,
+                        "q_tokens": step,
+                        "probe_tokens": 0,
+                        "total_new_tokens": step,
+                        "stopped_by": "eos",
+                    })
+                    solved = True
+                    break
 
-            if any(tok in eos_id_set for tok in probe_prefix):
-                break
-        if not solved:
+                if any(tok in eos_id_set for tok in probe_prefix):
+                    break
+        else:
             results.append({
                 "idx": i,
                 "gold": gold,
