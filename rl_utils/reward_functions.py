@@ -1,6 +1,6 @@
 import torch
-from .utils_simulation import make_padded_batch_from_token_lists
-from .utils_parsing import is_correct
+from rl_utils.utils_simulation import make_padded_batch_from_token_lists
+from llm_utils.utils_parsing import is_correct
 
 
 @torch.inference_mode()

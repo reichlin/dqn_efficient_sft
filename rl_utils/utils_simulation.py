@@ -35,7 +35,7 @@ def make_padded_batch_from_token_lists(token_lists, pad_token_id, device, max_co
 
 @torch.inference_mode()
 def get_state_and_action_set(model, tokenizer, token_lists, top_k, max_context_len=None):
-    dev = model_input_device(model)
+    dev = next(model.parameters()).device
 
     batch = make_padded_batch_from_token_lists(
         token_lists=token_lists,

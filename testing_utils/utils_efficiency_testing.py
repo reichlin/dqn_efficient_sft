@@ -1,8 +1,8 @@
 import torch
 from tqdm import tqdm
-from .utils_simulation import make_padded_batch_from_token_lists, get_state_and_action_set
-from .utils_parsing import is_correct, get_eos_ids
-from .utils_prompting import build_prompt_continuation
+from rl_utils.utils_simulation import make_padded_batch_from_token_lists, get_state_and_action_set
+from llm_utils.utils_parsing import is_correct, get_eos_ids
+from llm_utils.utils_prompting import build_prompt_continuation
 
 
 @torch.inference_mode()
